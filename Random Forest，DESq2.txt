@@ -1,0 +1,60 @@
+随机森林
+install.packages("randomForest")
+library(randomForest)
+library(readxl)
+data<- read_excel("C:/Users/86180/Desktop/enengyTurExp_up2 (2).xlsx")
+target=data$ID
+data = data[,-1]
+rf_model <- randomForest(target ~ ., data = data, importance = TRUE)
+feature_importance <- importance(rf_model)
+write.table(feature_importance, file  = "D:/生物医学工程/importance1.txt",sep=" ")
+write.table(feature_importance)
+
+DEseq2
+mycounts <- read.csv("C:/Users/86180/Desktop/enengyTurExp_up2 _2.3.csv")
+rownames(mycounts)<-mycounts[,1]
+mycounts<-mycounts[,-1]
+mycounts<-data.matrix(mycounts)
+mycounts <- round(mycounts)
+mycounts[mycounts < 0] <- 0
+colData<-read.csv("C:/Users/86180/Desktop/score_matrixup2.3.csv", row.names = 1)
+colData$Cluster <- factor(colData$Cluster)
+Cluster <- factor(colData$Cluster)
+Cluster = relevel(Cluster, "2")
+dds <- DESeqDataSetFromMatrix(mycounts, colData, design= ~ Cluster)
+res <- results(dds, contrast = c('Cluster', '3', '2'))
+dds <- DESeq(dds)
+res <- results(dds, contrast = c('Cluster', '3', '2'))
+res = res[order(res$pvalue),]
+write.csv(res,file="DEseq2_allresults_1.csv",quote = FALSE)
+res[which(res$log2FoldChange >= 1 & res$padj < 0.05),'sig'] <- 'up'
+res[which(res$log2FoldChange <= -1 & res$padj < 0.05),'sig'] <- 'down'
+res [which(abs(res$log2FoldChange) <= 1 | res$padj >= 0.05),'sig'] <- 'none'
+diff_gene_deseq2 <- subset(res, sig %in% c('up', 'down'))
+write.csv(diff_gene_deseq2,file="diff_gene_deseq2_1.csv")
+res_up <- subset(res, sig == 'up')
+write.csv(res_up, file = 'diff_gene_up_1.csv')
+write.csv(res_down, file = 'diff_gene_down_1.csv')
+library(ggplot2)
+library(ggrepel)
+dat<-as.data.frame(res)
+pdf("volcano_plot_1.pdf",height=12,width=11)
+ggplot(dat,aes(x=log2FoldChange,y=-log10(padj),color=sig))+
++     geom_point()+
++     scale_color_manual(values=c("#CC0000","#BBBBBB","#2f5688"))+
++     theme_bw()+
++     theme(
++         legend.title = element_blank()
+ggplot(dat,aes(x=log2FoldChange,y=-log10(padj),color=sig))+
+geom_point()+
+scale_color_manual(values=c("#CC0000","#BBBBBB","#2f5688"))+  
+theme_bw()+  
+theme(
+legend.title = element_blank()  
+)+
+theme(axis.title.x =element_text(size=14,face = "bold"), axis.title.y=element_text(size=14,face = "bold"),axis.text = element_text(size = 14,face = "bold")) +  #调整坐标轴字号
+ylab('-log10 (p-adj)')+  
+xlab('log2 (FoldChange)')+  
+geom_vline(xintercept=c(-1,1),lty=3,col="black",lwd=0.5) +  
+geom_hline(yintercept = -log10(0.05),lty=3,col="black",lwd=0.5)  
+dev.off()
